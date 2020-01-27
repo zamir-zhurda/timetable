@@ -26,6 +26,17 @@ namespace timetable
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowMyOrigin",
+                builder => builder.WithOrigins(
+                    "http://localhost:4200/",
+                    "http://localhost:4200")
+                    .WithMethods("POST", "GET", "PUT")
+                    .WithHeaders("*")
+                    );
+            });
+
             string connectionString = String.Empty;
             connectionString = Configuration.GetConnectionString("Default");
 
@@ -37,6 +48,7 @@ namespace timetable
             // In production, the Angular files will be served from this directory
             services.AddSpaStaticFiles(configuration =>
             {
+                // configuration.RootPath = "calendar-timetable/dist";
                 configuration.RootPath = "ClientApp/dist";
             });
         }
@@ -54,7 +66,7 @@ namespace timetable
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
-
+            app.UseCors("AllowMyOrigin");
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             if (!env.IsDevelopment())
@@ -76,6 +88,7 @@ namespace timetable
                 // To learn more about options for serving an Angular SPA from ASP.NET Core,
                 // see https://go.microsoft.com/fwlink/?linkid=864501
 
+                // spa.Options.SourcePath = "calendar-timetable";
                 spa.Options.SourcePath = "ClientApp";
 
                 if (env.IsDevelopment())
