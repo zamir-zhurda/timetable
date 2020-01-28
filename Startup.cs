@@ -49,7 +49,7 @@ namespace timetable
             services.AddSpaStaticFiles(configuration =>
             {
                 // configuration.RootPath = "calendar-timetable/dist";
-                configuration.RootPath = "ClientApp/dist";
+                configuration.RootPath = "ClientTimeTable/dist";
             });
         }
 
@@ -89,7 +89,7 @@ namespace timetable
                 // see https://go.microsoft.com/fwlink/?linkid=864501
 
                 // spa.Options.SourcePath = "calendar-timetable";
-                spa.Options.SourcePath = "ClientApp";
+                spa.Options.SourcePath = "ClientTimeTable";
 
                 if (env.IsDevelopment())
                 {

@@ -1,3 +1,5 @@
+using System.Data.Common;
+using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -22,6 +24,22 @@ namespace timetable.Controllers
             this._mapper = mapper;
         }
 
+
+        [HttpGet("/api/importlendet")]
+        public async Task<IEnumerable<ImportLendetResource>> TerhiqImportLendet()
+        {
+            var importLendet = await _context.ImportLendet.ToListAsync();
+
+            return _mapper.Map<List<ImportLendet>, List<ImportLendetResource>>(importLendet);
+        }
+        [HttpGet("/api/orari")]
+        public async Task<IEnumerable<OrariResource>> TerhiqOrarin()
+        {
+            var orari = await _context.Orari.ToListAsync();
+
+            return _mapper.Map<List<Orari>, List<OrariResource>>(orari);
+        }
+
         [HttpGet("/api/ditet")]
         public async Task<IEnumerable<DitetResource>> TerhiqDitet()
         {
@@ -31,15 +49,50 @@ namespace timetable.Controllers
         }
 
         [HttpGet("/api/lendet")]
-        public async Task<IEnumerable<LendetResource>> TerhiqLendet()
+        public async Task<IEnumerable<DegetLendetResource>> TerhiqLendet()
         {
-            List<Lendet> lendet = await _context.Lendet.ToListAsync();
-            var results = from lenda in lendet
-                          group lenda.Dega by lenda.Id into g
-                          select new { DegaId = g.Key, Dega = g.ToList() };
-            Debug.WriteLine("\n results: ", results);
-            return _mapper.Map<List<Lendet>, List<LendetResource>>(lendet);
+            List<Lendet> oListLendet = await _context.Lendet.ToListAsync();
+            // var results = from lenda in lendet
+            //               group lenda.Dega by lenda.Id into g
+            //               select new { DegaId = g.Key, Dega = g.ToList() };
+            var groupedDegetLendetResource = oListLendet.GroupBy(lenda => lenda.Dega)
+                                     .Select(group => new DegetLendetResource { DegaName = group.Key, Lendet = group.Select(lenda => new LendetResource { Id = lenda.Id, Lenda = lenda.Lenda }).ToList() }).ToList();
+            Debug.WriteLine("\n results: ", groupedDegetLendetResource);
+            // return _mapper.Map<List<Lendet>, List<LendetResource>>(lendet);
+            return groupedDegetLendetResource;
         }
+
+        // [HttpGet("/api/lendet2")]
+        // public async Task<IEnumerable<DegetLendetResource>> TerhiqLendet2()
+        // {
+        //     List<Deget> oListDeget = await _context.Deget.ToListAsync();
+        //     List<Lendet> oListLendet = await _context.Lendet.ToListAsync();
+
+        //     var grouped = from dega in oListDeget
+        //                   join lenda in oListLendet
+        //                   on dega.Dega equals lenda.Dega
+        //                   select new
+        //                   {
+        //                       DegaId = dega.Id,
+        //                       DegaName = dega.Dega,
+        //                       Lendet = oListLendet.Where(l => l.Dega == dega.Dega).ToList()
+        //                   };
+
+        //     var consolidateDeget = from dega in grouped
+        //                            group dega by new
+        //                            {
+        //                                dega.DegaId,
+        //                                dega.DegaName
+        //                            } into gdl
+        //                            select new DegetLendetResource
+        //                            {
+        //                                DegaId = gdl.Key.DegaId,
+        //                                DegaName = gdl.Key.DegaName,
+        //                                Lendet = gdl.Select(lenda => gdl.Lendet.Distinct())
+        //                            };
+        //     return consolidateDeget;
+
+        // }
 
         [HttpGet("/api/deget")]
         public async Task<IEnumerable<DegetResource>> TerhiqDeget()
@@ -49,6 +102,13 @@ namespace timetable.Controllers
             return _mapper.Map<List<Deget>, List<DegetResource>>(deget);
         }
 
+        [HttpGet("/api/deget/{id}")]
+        public DegetResource TerhiqDegenById(Int32 id)
+        {
+            var deget = _context.Deget.Where(dega => dega.Id == id).SingleOrDefault();
+
+            return _mapper.Map<Deget, DegetResource>(deget);
+        }
         [HttpGet("/api/klasat")]
         public async Task<IEnumerable<KlasatResource>> TerhiqKlasat()
         {
@@ -116,9 +176,41 @@ namespace timetable.Controllers
             oListEvents.Add(event4);
             return oListEvents;
         }
-        // public async Task<IEnumerable<>> RuajEventet([FromBody] )
-        // {
-        //     var object = _mapper.Map <
-        // }
+
+        [HttpGet("/api/subjects/{degreeId}")]
+        public IList<EventResource> FetchSubjectsByDegreeId(string degreeId)
+        {
+            Deget dega = _context.Deget.Where(degree => degree.Id == Convert.ToInt32(degreeId)).FirstOrDefault();
+            List<Lendet> allSubjectsOfCurrentDegree = _context.Lendet.Where(lenda => lenda.Dega == dega.Dega).ToList();
+
+            DegetLendetResource degetLendetResource = new DegetLendetResource();
+
+
+            degetLendetResource.DegaId = dega.Id;
+            degetLendetResource.DegaName = dega.Dega;
+            degetLendetResource.Lendet = _mapper.Map<List<Lendet>, List<LendetResource>>(allSubjectsOfCurrentDegree);
+
+            List<EventResource> oListEvents = convertSubjectsToEvents(degetLendetResource);
+
+            // return groupedDegetLendetResource;
+            return oListEvents;
+
+        }
+
+
+        private List<EventResource> convertSubjectsToEvents(DegetLendetResource degetLendetResource)
+        {
+            List<EventResource> oListEvents = new List<EventResource>();
+
+            foreach (var lenda in degetLendetResource.Lendet)
+            {
+                EventResource eventResource = new EventResource();
+                eventResource.id = lenda.Id;
+                eventResource.title = lenda.Lenda;
+                eventResource.description = degetLendetResource.DegaName;
+            }
+
+            return oListEvents;
+        }
     }
 }
